@@ -6,10 +6,10 @@ import time
 from flask import Flask, render_template, request, jsonify, g
 from google import genai
 from google.genai import types
-from dotenv import load_dotenv
+
 
 # --- Configuration ---
-load_dotenv()
+
 app = Flask(__name__)
 DB_NAME = 'gemini_chat.db'
 MODEL_NAME = 'gemini-2.5-flash'
