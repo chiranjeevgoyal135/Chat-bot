@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chiranjeev's AI Chatbot</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script>
+        marked.setOptions({
+            gfm: true, 
+            breaks: true 
+        });
+    </script>
+    <style>
+        /* Modal styles */
+        .modal {
+            display: flex;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <!-- Simple Passcode Login Modal -->
+    <div id="login-modal" class="modal">
+        <div style="background: #2c3e50; padding: 30px; border-radius: 12px; text-align: center; max-width: 400px; width: 90%;">
+            <h2 style="color: #4f46e5; margin-bottom: 20px;">🤖 Enter Group Passcode</h2>
+            <p style="color: #e5e7eb; margin-bottom: 20px; font-size: 0.9em;">
+                Enter your group's secret passcode to start chatting
+            </p>
+            
+            <input type="text" id="passcode-input" placeholder="Enter group passcode" 
+                   style="width: 100%; padding: 12px; border: 1px solid #4f46e5; background: #34495e; color: white; border-radius: 8px; font-size: 1em; margin-bottom: 15px;">
+            
+            <button id="join-session-btn" 
+                    style="width: 100%; padding: 12px; background: #4f46e5; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 1em;">
+                Join Group Chat
+            </button>
+            
+            <p id="login-error" style="color: #ef4444; margin-top: 10px; display: none; font-size: 0.9em;"></p>
+        </div>
+    </div>
+
+    <!-- Main App Content (Hidden until login) -->
+    <div id="app-container" style="display: none;">
+        <!-- Sidebar -->
+        <div id="sidebar">
+            <h2 id="app-title">🤖 Group AI Chat</h2>
+            <button id="new-chat-btn">➕ New Chat</button>
+            <div id="chat-history">
+                <!-- Group chat info will be shown here -->
+            </div>
+        </div>
+
+        <!-- Main Content (Chat Box) -->
+        <div id="main-content">
+            <header id="chat-header">
+                <button id="sidebar-toggle-btn" title="Toggle Sidebar">&#9776;</button> 
+                <span id="header-app-name">🤖 Group Chat</span>
+                <span id="current-chat-title">Group Chat</span>
+                <button id="header-new-chat-btn" title="New Chat">New Chat</button>
+            </header>
+            
+            <div id="message-area">
+                <!-- Messages loaded here by script.js -->
+            </div>
+
+            <div id="input-area">
+                <!-- Image Preview Area -->
+                <div id="image-preview-container" class="hidden">
+                    <img id="image-preview" src="#" alt="Image Preview">
+                    <button id="clear-image-btn" title="Remove Image">&times;</button>
+                </div>
+
+                <!-- Hidden File Input -->
+                <input type="file" id="file-input" accept="image/*" class="hidden">
+                
+                <!-- Camera Icon Button -->
+                <button id="upload-btn" title="Send Image">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M4.5 3.75a3 3 0 0 0-3 3v10.5a3 3 0 0 0 3 3h15a3 3 0 0 0 3-3V6.75a3 3 0 0 0-3-3h-4.5a.75.75 0 0 0-.75.75v3c0 .414.336.75.75.75h3a.75.75 0 0 0 .75-.75V6.75a1.5 1.5 0 0 1 1.5 1.5v7.5a1.5 1.5 0 0 1-1.5 1.5h-15a1.5 1.5 0 0 1-1.5-1.5V6.75a1.5 1.5 0 0 1 1.5-1.5H19.5a.75.75 0 0 0 .75-.75v-3a.75.75 0 0 0-.75-.75H4.5z"/>
+                        <path d="M12 9a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/>
+                    </svg>
+                </button>
+                
+                <textarea id="user-input" placeholder="Type your message..." rows="1"></textarea>
+                
+                <!-- Send button -->
+                <button id="send-btn" title="Send">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M3.478 2.405a.75.75 0 0 0-.926.94l2.432 7.817-2.432 7.818a.75.75 0 0 0 .926.94L22.464 12 3.478 2.405z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    
+    <!-- Ensure modal shows on load -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const modal = document.getElementById('login-modal');
+            const appContainer = document.getElementById('app-container');
+            if (modal) {
+                modal.style.display = 'flex';
+                appContainer.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
