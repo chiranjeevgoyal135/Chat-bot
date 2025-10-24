@@ -82,6 +82,7 @@ function copyToClipboard(btnElement, textToCopy) {
 }
 
 // --- Simple Real-time Polling Functions ---
+// --- Real-time Polling Functions ---
 function startPolling() {
     if (pollingInterval) {
         clearInterval(pollingInterval);
@@ -93,15 +94,31 @@ function startPolling() {
                 const response = await fetch(`/check_new_messages/${currentChatId}?last_check=${lastMessageCheck}`);
                 const data = await response.json();
                 
-                if (data.has_new_messages) {
-                    // Simply reload the entire chat to get new messages
-                    await loadMessages(currentChatId);
+                if (data.has_new_messages && data.new_messages && data.new_messages.length > 0) {
+                    console.log(`Found ${data.new_messages.length} new messages from other users`);
+                    
+                    // Only add messages that are truly new (not our own)
+                    let addedMessages = 0;
+                    data.new_messages.forEach(msg => {
+                        // Only add if this message is newer than our last check
+                        // This prevents duplicates from our own messages
+                        if (msg.timestamp > lastMessageCheck) {
+                            displayMessage(msg.sender, msg.text);
+                            addedMessages++;
+                        }
+                    });
+                    
+                    if (addedMessages > 0) {
+                        console.log(`Added ${addedMessages} new messages from other users`);
+                        lastMessageCheck = data.current_time;
+                        messageArea.scrollTop = messageArea.scrollHeight;
+                    }
                 }
             } catch (error) {
                 console.error('Error checking for new messages:', error);
             }
         }
-    }, 3000); // Check every 3 seconds
+    }, 2000); // Check every 2 seconds
 }
 
 function stopPolling() {
@@ -373,8 +390,9 @@ async function loadMessages(chat_id) {
         } else {
             data.messages.forEach(msg => {
                 displayMessage(msg.sender, msg.text);
-                lastMessageCheck = Math.max(lastMessageCheck, msg.timestamp);
             });
+            // Set lastMessageCheck to the latest message timestamp
+            lastMessageCheck = data.messages[data.messages.length - 1].timestamp;
         }
         
         // Update sidebar to highlight active chat
@@ -482,6 +500,10 @@ async function sendMessage() {
     if (!messageText && !imageBase64Data) return;
     if (currentChatId === null || sendButton.disabled) return;
 
+    // Store current timestamp before sending
+    const beforeSendTime = Math.floor(Date.now() / 1000);
+    
+    // Display user message immediately
     displayMessage('user', messageText, null, currentImageBase64Url);
     
     userInput.value = '';
@@ -495,6 +517,7 @@ async function sendMessage() {
         mime_type: imageMimeType
     };
 
+    // Display loading indicator
     displayMessage('gemini', 'loading', 'loading-indicator');
     clearImage();
 
@@ -526,10 +549,14 @@ async function sendMessage() {
         if (data.error) {
             displayMessage('gemini', `[ERROR]: ${data.error}`);
         } else {
+            // Display AI response immediately
             displayMessage('gemini', data.response);
-            // Update last check time
+            
+            // Update last check time to AFTER our sent message
+            // This prevents polling from picking up our own messages
             lastMessageCheck = Math.floor(Date.now() / 1000);
-            // Reload chat history to update titles
+            
+            // Update chat history for title changes
             await loadChatHistory();
         }
 
