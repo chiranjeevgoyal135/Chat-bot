@@ -82,6 +82,7 @@ function copyToClipboard(btnElement, textToCopy) {
 }
 
 // --- Real-time Polling Functions ---
+// --- Real-time Polling Functions ---
 function startPolling() {
     if (pollingInterval) {
         clearInterval(pollingInterval);
@@ -96,9 +97,13 @@ function startPolling() {
                 if (data.has_new_messages && data.new_messages && data.new_messages.length > 0) {
                     console.log(`Found ${data.new_messages.length} new messages`);
                     
-                    // Display new messages without reloading the entire chat
+                    // Only display messages that are NEWER than our last check
+                    // This prevents displaying messages we already have
                     data.new_messages.forEach(msg => {
-                        displayMessage(msg.sender, msg.text);
+                        // Only add if this message is actually new
+                        if (msg.timestamp > lastMessageCheck) {
+                            displayMessage(msg.sender, msg.text);
+                        }
                     });
                     
                     lastMessageCheck = data.current_time;
@@ -491,6 +496,9 @@ async function sendMessage() {
     if (!messageText && !imageBase64Data) return;
     if (currentChatId === null || sendButton.disabled) return;
 
+    // Store the current lastMessageCheck to avoid duplicates
+    const currentLastCheck = lastMessageCheck;
+    
     displayMessage('user', messageText, null, currentImageBase64Url);
     
     userInput.value = '';
@@ -535,8 +543,7 @@ async function sendMessage() {
         if (data.error) {
             displayMessage('gemini', `[ERROR]: ${data.error}`);
         } else {
-            displayMessage('gemini', data.response);
-            // Update last check time to avoid duplicate messages
+            // Update last check time to the current time to avoid duplicates
             lastMessageCheck = Math.floor(Date.now() / 1000);
             // Reload chat history to update titles
             await loadChatHistory();
