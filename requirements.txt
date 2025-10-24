@@ -1,7 +1,7 @@
 # Minimal dependencies required for the project
 '''flask
 google-genai'''
-flask==2.3.3
+flask
 google-genai==0.3.0
 python-dotenv==1.0.0
 gunicorn==21.2.0
