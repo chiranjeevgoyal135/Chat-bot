@@ -18,11 +18,16 @@ MODEL_NAME = 'gemini-2.5-flash'
 # Add your group passcodes here in this format:
 # "PASSCODE": "Group Name"
 PREDEFINED_PASSCODES = {
-    "chiru1": "TEAM ONE",
-    "chiru2": "TEAM TWO", 
-    "chiru3": "TEAM THREE",
-    "chiru4": "TEAM FOUR",
-    "chiru5": "TEAM FIVE"
+    "ai1": "TEAM ONE",
+    "ai2": "TEAM TWO", 
+    "ai3": "TEAM THREE",
+    "ai4": "TEAM FOUR",
+    "ai5": "TEAM FIVE",
+    "ai6": "TEAM SIX",
+    "ai7": "TEAM SEVEN",
+    "ai8": "TEAM EIGHT",
+    "ai9": "TEAM NINE",
+    "ai10": "TEAM TEN"
     # ADD MORE PASSCODES HERE:
     # "YOUR_PASSCODE": "Your Group Name",
 }
