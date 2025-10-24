@@ -22,7 +22,9 @@ const loginError = document.getElementById('login-error');
 
 // Real-time polling variables
 let lastMessageCheck = 0;
+let lastChatCheck = 0;
 let pollingInterval = null;
+let chatPollingInterval = null;
 
 // --- Multimodal State Variables ---
 const fileInput = document.getElementById('file-input');
@@ -81,7 +83,6 @@ function copyToClipboard(btnElement, textToCopy) {
     document.body.removeChild(tempInput);
 }
 
-// --- Simple Real-time Polling Functions ---
 // --- Real-time Polling Functions ---
 function startPolling() {
     if (pollingInterval) {
@@ -121,11 +122,46 @@ function startPolling() {
     }, 2000); // Check every 2 seconds
 }
 
+function startChatPolling() {
+    if (chatPollingInterval) {
+        clearInterval(chatPollingInterval);
+    }
+    
+    chatPollingInterval = setInterval(async () => {
+        if (currentSessionId) {
+            try {
+                const response = await fetch(`/check_new_chats/${currentSessionId}?last_check=${lastChatCheck}`);
+                const data = await response.json();
+                
+                if (data.has_new_chats) {
+                    console.log('New chat detected, reloading chat list');
+                    await loadChatHistory();
+                    lastChatCheck = data.current_time;
+                }
+            } catch (error) {
+                console.error('Error checking for new chats:', error);
+            }
+        }
+    }, 3000); // Check for new chats every 3 seconds
+}
+
 function stopPolling() {
     if (pollingInterval) {
         clearInterval(pollingInterval);
         pollingInterval = null;
     }
+}
+
+function stopChatPolling() {
+    if (chatPollingInterval) {
+        clearInterval(chatPollingInterval);
+        chatPollingInterval = null;
+    }
+}
+
+function stopAllPolling() {
+    stopPolling();
+    stopChatPolling();
 }
 
 // --- Delete Chat Function ---
@@ -201,7 +237,14 @@ async function joinSession(passcode) {
             
             await loadMessages(currentChatId);
             await loadChatHistory();
+            
+            // Initialize polling times
+            lastChatCheck = Math.floor(Date.now() / 1000);
+            
+            // Start both polling systems
             startPolling();
+            startChatPolling();
+            
             await loadSessionInfo(currentSessionId);
             
         } else {
@@ -234,7 +277,7 @@ async function startNewChatInSession() {
         
         if (response.ok) {
             // Stop polling for old chat
-            stopPolling();
+            stopAllPolling();
             
             // Switch to new chat
             currentChatId = data.chat_id;
@@ -243,7 +286,13 @@ async function startNewChatInSession() {
             messageArea.innerHTML = '';
             await loadMessages(currentChatId);
             await loadChatHistory(); // Reload sidebar to show new chat
+            
+            // Update chat check time to now so other users detect the new chat
+            lastChatCheck = Math.floor(Date.now() / 1000);
+            
+            // Restart polling
             startPolling();
+            startChatPolling();
             
         } else {
             alert('Failed to start new chat: ' + data.error);
@@ -270,7 +319,7 @@ async function loadChatHistory() {
             <div style="font-weight: 600; margin-bottom: 5px;">${currentGroupName}</div>
             <div style="font-size: 0.8em; color: #9ca3af;">Passcode: ${currentPasscode}</div>
             <div style="font-size: 0.7em; color: #6b7280; margin-top: 8px;">
-                💡 Real-time chat - messages sync automatically
+                💡 Real-time chat - messages and chats sync automatically
             </div>
         `;
         chatHistoryList.appendChild(groupInfo);
@@ -367,7 +416,7 @@ async function loadMessages(chat_id) {
     }
     
     // Stop polling for old chat
-    stopPolling();
+    stopAllPolling();
     
     currentChatId = chat_id;
     messageArea.innerHTML = '';
@@ -405,6 +454,7 @@ async function loadMessages(chat_id) {
         sendButton.disabled = false;
         userInput.focus();
         startPolling(); // Start polling for new chat
+        startChatPolling(); // Start chat list polling
     }
 }
 
@@ -650,10 +700,13 @@ fileInput.addEventListener('change', async (e) => {
 // 7. Stop polling when page is hidden
 document.addEventListener('visibilitychange', function() {
     if (document.hidden) {
-        stopPolling();
+        stopAllPolling();
     } else {
         if (currentChatId && !pollingInterval) {
             startPolling();
+        }
+        if (currentSessionId && !chatPollingInterval) {
+            startChatPolling();
         }
     }
 });

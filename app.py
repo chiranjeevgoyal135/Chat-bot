@@ -280,6 +280,31 @@ def check_new_messages(chat_id):
         print(f"Database error checking new messages: {e}")
         return jsonify({'has_new_messages': False, 'current_time': last_check, 'new_messages': []})
     
+@app.route('/check_new_chats/<int:session_id>', methods=['GET'])
+def check_new_chats(session_id):
+    """Real-time endpoint: checks if there are new chats since last check."""
+    db = get_db()
+    cursor = db.cursor()
+    try:
+        last_check = request.args.get('last_check', 0, type=int)
+        
+        # Check if any new chats were created since last check
+        cursor.execute(
+            "SELECT COUNT(*) as new_count, MAX(timestamp) as current_time FROM chats WHERE session_id = ? AND timestamp > ?",
+            (session_id, last_check)
+        )
+        result = cursor.fetchone()
+        
+        current_time = result['current_time'] or last_check
+        
+        return jsonify({
+            'has_new_chats': result['new_count'] > 0,
+            'current_time': current_time
+        })
+    except sqlite3.Error as e:
+        print(f"Database error checking new chats: {e}")
+        return jsonify({'has_new_chats': False, 'current_time': last_check})
+    
 @app.route('/get_session_info/<int:session_id>', methods=['GET'])
 def get_session_info(session_id):
     """Gets group name and basic session info."""
