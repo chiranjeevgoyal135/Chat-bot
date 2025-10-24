@@ -120,6 +120,54 @@ function stopPolling() {
     }
 }
 
+// --- Delete Chat Function ---
+async function deleteChat(chat_id) {
+    if (!confirm("Are you sure you want to delete this chat? This action cannot be undone.")) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/delete_chat/${chat_id}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            // If we're currently viewing the deleted chat, clear the message area
+            if (currentChatId === chat_id) {
+                messageArea.innerHTML = '';
+                currentChatTitle.textContent = 'Select a Chat';
+                sendButton.disabled = true;
+                
+                // Try to load another chat or show empty state
+                const response = await fetch(`/get_chats/${currentSessionId}`);
+                const chats = await response.json();
+                
+                if (chats.length > 0) {
+                    // Load the most recent chat
+                    await loadMessages(chats[0].chat_id);
+                } else {
+                    // No chats left, show empty state
+                    displayMessage('gemini', 'No chats available. Create a new chat to start conversation.', 'no-chats-message');
+                }
+            }
+            
+            // Reload the chat history to reflect the deletion
+            await loadChatHistory();
+            
+        } else {
+            alert(`Failed to delete chat: ${data.error || 'Unknown error'}`);
+        }
+    } catch (error) {
+        console.error('Error deleting chat:', error);
+        alert('Network error while trying to delete chat.');
+    }
+}
+
 // --- Core Chat Functions ---
 async function joinSession(passcode) {
     try {
@@ -250,10 +298,25 @@ async function loadChatHistory() {
                         <div class="tooltip-title">${chat.title}</div>
                         <div>Created: ${formattedDate} at ${formattedTime}</div>
                     </span>
+                    <span class="delete-btn" data-chat-id="${chat.chat_id}" title="Delete Chat">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path fill-rule="evenodd" d="M16.5 4.475C16.5 3.391 17.391 2.5 18.475 2.5h1.05C20.609 2.5 21.5 3.391 21.5 4.475v1.05c0 1.084-.891 1.975-1.975 1.975h-1.05c-1.084 0-1.975-.891-1.975-1.975v-1.05zM17.5 19.5V8.5h3.0v11.0h-3.0zM6.5 8.5v11.0c0 1.105.895 2.0 2.0 2.0h7.0c1.105 0 2.0-.895 2.0-2.0V8.5h-11.0zM14.5 4.5h-5.0c-1.105 0-2.0.895-2.0 2.0v.5h9.0v-.5c0-1.105-.895-2.0-2.0-2.0z"/>
+                        </svg>
+                    </span>
                 `;
 
-                chatItem.addEventListener('click', () => {
-                    loadMessages(chat.chat_id);
+                // Click to load chat
+                chatItem.addEventListener('click', (e) => {
+                    if (!e.target.closest('.delete-btn')) {
+                        loadMessages(chat.chat_id);
+                    }
+                });
+
+                // Delete button click
+                const deleteBtn = chatItem.querySelector('.delete-btn');
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deleteChat(chat.chat_id);
                 });
 
                 chatHistoryList.appendChild(chatItem);

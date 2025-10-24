@@ -425,6 +425,23 @@ def send_message():
 
     return jsonify({'response': gemini_response_text})
 
+@app.route('/delete_chat/<int:chat_id>', methods=['POST'])
+def delete_chat(chat_id):
+    """Deletes a chat and all its messages."""
+    db = get_db()
+    cursor = db.cursor()
+    try:
+        # First delete all messages in the chat
+        cursor.execute("DELETE FROM messages WHERE chat_id = ?", (chat_id,))
+        # Then delete the chat itself
+        cursor.execute("DELETE FROM chats WHERE chat_id = ?", (chat_id,))
+        db.commit()
+        
+        return jsonify({'success': True, 'message': 'Chat deleted successfully'})
+    except sqlite3.Error as e:
+        print(f"Database error deleting chat {chat_id}: {e}")
+        return jsonify({'success': False, 'error': 'Database error deleting chat'}), 500
+
 if __name__ == '__main__':
     # Initialize database on startup
     with app.app_context():
