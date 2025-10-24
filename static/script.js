@@ -93,15 +93,24 @@ function startPolling() {
                 const response = await fetch(`/check_new_messages/${currentChatId}?last_check=${lastMessageCheck}`);
                 const data = await response.json();
                 
-                if (data.has_new_messages) {
-                    await loadMessages(currentChatId);
+                if (data.has_new_messages && data.new_messages && data.new_messages.length > 0) {
+                    console.log(`Found ${data.new_messages.length} new messages`);
+                    
+                    // Display new messages without reloading the entire chat
+                    data.new_messages.forEach(msg => {
+                        displayMessage(msg.sender, msg.text);
+                    });
+                    
                     lastMessageCheck = data.current_time;
+                    
+                    // Scroll to bottom to show new messages
+                    messageArea.scrollTop = messageArea.scrollHeight;
                 }
             } catch (error) {
                 console.error('Error checking for new messages:', error);
             }
         }
-    }, 2000);
+    }, 3000); // Check every 3 seconds
 }
 
 function stopPolling() {
@@ -205,7 +214,7 @@ async function loadChatHistory() {
             <div style="font-weight: 600; margin-bottom: 5px;">${currentGroupName}</div>
             <div style="font-size: 0.8em; color: #9ca3af;">Passcode: ${currentPasscode}</div>
             <div style="font-size: 0.7em; color: #6b7280; margin-top: 8px;">
-                💡 All group members see the same chats
+                💡 Real-time chat - messages sync automatically
             </div>
         `;
         chatHistoryList.appendChild(groupInfo);
@@ -219,6 +228,8 @@ async function loadChatHistory() {
             chats.forEach(chat => {
                 const chatItem = document.createElement('div');
                 chatItem.classList.add('chat-item');
+                chatItem.setAttribute('data-chat-id', chat.chat_id);
+                
                 if (chat.chat_id == currentChatId) {
                     chatItem.classList.add('active');
                 }
@@ -281,7 +292,7 @@ async function loadSessionInfo(sessionId) {
 
 async function loadMessages(chat_id) {
     if (currentChatId == chat_id && messageArea.children.length > 0) {
-        return;
+        return; // Don't reload if we're already viewing this chat
     }
     
     // Stop polling for old chat
@@ -295,10 +306,6 @@ async function loadMessages(chat_id) {
     document.querySelectorAll('.chat-item').forEach(item => {
         item.classList.remove('active');
     });
-    const activeItem = document.querySelector(`[data-chat-id="${chat_id}"]`);
-    if (activeItem) {
-        activeItem.classList.add('active');
-    }
 
     try {
         const response = await fetch(`/get_messages/${chat_id}`);
@@ -315,6 +322,10 @@ async function loadMessages(chat_id) {
                 lastMessageCheck = Math.max(lastMessageCheck, msg.timestamp);
             });
         }
+        
+        // Update sidebar to highlight active chat
+        await loadChatHistory();
+        
     } catch (error) {
         console.error('Error loading messages:', error);
         displayMessage('gemini', 'Error loading chat messages.', 'error-message');
@@ -462,6 +473,7 @@ async function sendMessage() {
             displayMessage('gemini', `[ERROR]: ${data.error}`);
         } else {
             displayMessage('gemini', data.response);
+            // Update last check time to avoid duplicate messages
             lastMessageCheck = Math.floor(Date.now() / 1000);
             // Reload chat history to update titles
             await loadChatHistory();

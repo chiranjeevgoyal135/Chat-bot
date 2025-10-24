@@ -255,26 +255,32 @@ def check_new_messages(chat_id):
     try:
         last_check = request.args.get('last_check', 0, type=int)
         
+        # Get the count of new messages and also the new messages themselves
         cursor.execute(
-            "SELECT COUNT(*) as new_count FROM messages WHERE chat_id = ? AND timestamp > ?",
+            "SELECT COUNT(*) as new_count, MAX(timestamp) as current_time FROM messages WHERE chat_id = ? AND timestamp > ?",
             (chat_id, last_check)
         )
         result = cursor.fetchone()
         
+        # Also get the actual new messages to return
         cursor.execute(
-            "SELECT MAX(timestamp) as current_time FROM messages WHERE chat_id = ?",
-            (chat_id,)
+            "SELECT sender, text, timestamp FROM messages WHERE chat_id = ? AND timestamp > ? ORDER BY timestamp ASC",
+            (chat_id, last_check)
         )
-        time_result = cursor.fetchone()
+        new_messages = cursor.fetchall()
+        new_message_list = [dict(msg) for msg in new_messages]
+        
+        current_time = result['current_time'] or last_check
         
         return jsonify({
             'has_new_messages': result['new_count'] > 0,
-            'current_time': time_result['current_time'] or last_check
+            'current_time': current_time,
+            'new_messages': new_message_list
         })
     except sqlite3.Error as e:
         print(f"Database error checking new messages: {e}")
-        return jsonify({'has_new_messages': False, 'current_time': last_check})
-
+        return jsonify({'has_new_messages': False, 'current_time': last_check, 'new_messages': []})
+    
 @app.route('/get_session_info/<int:session_id>', methods=['GET'])
 def get_session_info(session_id):
     """Gets group name and basic session info."""
