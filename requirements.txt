@@ -1,6 +1,5 @@
 # Minimal dependencies required for the project
-'''flask
-google-genai'''
+
 flask
 google-genai==0.3.0
 python-dotenv==1.0.0
