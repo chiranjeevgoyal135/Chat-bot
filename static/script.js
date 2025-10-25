@@ -550,6 +550,9 @@ async function sendMessage() {
     if (!messageText && !imageBase64Data) return;
     if (currentChatId === null || sendButton.disabled) return;
 
+    // Stop ALL polling completely during message sending
+    stopAllPolling();
+    
     // Store current timestamp before sending
     const beforeSendTime = Math.floor(Date.now() / 1000);
     
@@ -579,7 +582,12 @@ async function sendMessage() {
         }
         sendButton.disabled = false;
         userInput.focus();
-    }, 25000);
+        // Restart polling after timeout
+        setTimeout(() => {
+            startPolling();
+            startChatPolling();
+        }, 1000);
+    }, 30000); // Increased timeout to 30 seconds
 
     try {
         const response = await fetch('/send_message', {
@@ -602,9 +610,12 @@ async function sendMessage() {
             // Display AI response immediately
             displayMessage('gemini', data.response);
             
-            // Update last check time to AFTER our sent message
-            // This prevents polling from picking up our own messages
-            lastMessageCheck = Math.floor(Date.now() / 1000);
+            // Wait 2 seconds before restarting polling to ensure no duplicates
+            setTimeout(() => {
+                lastMessageCheck = Math.floor(Date.now() / 1000);
+                startPolling();
+                startChatPolling();
+            }, 2000);
             
             // Update chat history for title changes
             await loadChatHistory();
@@ -616,12 +627,17 @@ async function sendMessage() {
         const loadingIndicator = document.getElementById('loading-indicator');
         if (loadingIndicator) messageArea.removeChild(loadingIndicator);
         displayMessage('gemini', 'Network error. Check your connection.');
+        
+        // Restart polling on error
+        setTimeout(() => {
+            startPolling();
+            startChatPolling();
+        }, 1000);
     } finally {
         sendButton.disabled = false;
         userInput.focus();
     }
 }
-
 // --- Event Listeners ---
 
 // 1. Sidebar Toggle Button

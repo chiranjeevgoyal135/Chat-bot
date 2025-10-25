@@ -332,7 +332,7 @@ def get_session_info(session_id):
 @app.route('/send_message', methods=['POST'])
 def send_message():
     """
-    Handles user message for group sessions.
+    Handles user message for group sessions with better error handling for large responses.
     """
     if client is None:
         return jsonify({'error': 'AI client not initialized. Check your GEMINI_API_KEY.'}), 500
@@ -395,7 +395,14 @@ def send_message():
         )
         
         print("Sending message to Gemini...")
-        response = chat.send_message(user_message_parts)
+        # Add timeout and better error handling for large responses
+        response = chat.send_message(
+            user_message_parts,
+            config=types.GenerateContentConfig(
+                max_output_tokens=8192,  # Increased token limit for larger responses
+                temperature=0.7
+            )
+        )
         gemini_response_text = response.text
         print("Successfully received response from Gemini")
         
@@ -403,7 +410,7 @@ def send_message():
         print(f"Gemini API Error: {e}")
         print(f"Error type: {type(e)}")
         import traceback
-        print(f"Full traceback: {traceback.format_exc()}")
+        traceback.print_exc()
         
         # More specific error messages
         if "API_KEY" in str(e) or "key" in str(e).lower():
@@ -412,6 +419,10 @@ def send_message():
             return jsonify({'error': 'Gemini API quota exceeded. Please check your usage limits.'}), 500
         elif "429" in str(e):
             return jsonify({'error': 'Rate limit exceeded. Please wait a moment and try again.'}), 500
+        elif "timeout" in str(e).lower() or "timed out" in str(e).lower():
+            return jsonify({'error': 'Request timed out. The AI is taking too long to respond. Please try a simpler question.'}), 500
+        elif "length" in str(e).lower() or "token" in str(e).lower():
+            return jsonify({'error': 'Response too long. Please try breaking your question into smaller parts.'}), 500
         else:
             return jsonify({'error': f'Failed to communicate with AI: {str(e)}'}), 500
 
